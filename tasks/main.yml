@@ -1,0 +1,32 @@
+---
+# Copyright (c) 2021 Mohamed Tawfik <m_tawfik@aucegypt.edu>
+
+# - name: Import custom Ansible plugins
+#   import_role:
+#     name: ansible_plugins
+
+- name: Install required APT packages
+  ansible.builtin.package:
+    name: '{{ q("flattened",
+                  syncoid__base_packages
+                + syncoid__packages) }}'
+    state: present
+  register: syncoid__register_packages
+  until: syncoid__register_packages is succeeded
+
+- name: Import tasks to set syncoid__snapshot_pool
+  ansible.builtin.import_tasks: snapshot_pool.yml
+  when: syncoid__snapshot_pool|length == 0
+
+- name: Create ZFS dataset to act as syncoid backup target
+  community.general.zfs:
+    name: '{{ syncoid__snapshot_pool }}/{{ syncoid__snapshot_dataset }}'
+    extra_zfs_properties:
+      atime: off
+    state: present
+
+- name: Import tasks for config files
+  ansible.builtin.import_tasks: config_files.yml
+
+- name: Import tasks for cron files
+  ansible.builtin.import_tasks: cron_files.yml

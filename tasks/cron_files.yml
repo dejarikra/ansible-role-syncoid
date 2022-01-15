@@ -1,0 +1,16 @@
+---
+# Copyright (c) 2021 Mohamed Tawfik <m_tawfik@aucegypt.edu>
+
+- name: Ensure cron files' directories exist
+  ansible.builtin.file:
+    path: '{{ syncoid__config_global_dir }}/cron/{{ item }}'
+    mode: '0755'
+    state: directory
+  with_items: [ 'hourly', 'daily', 'weekly', 'monthly' ]
+
+- name: Generate cron files
+  ansible.builtin.template:
+    src: 'etc/cron/syncoid.cron.j2'
+    dest: '{{ syncoid__config_global_dir }}/cron/{{ item }}/syncoid'
+    mode: '0744'
+  with_items: [ 'hourly', 'daily', 'weekly', 'monthly' ]

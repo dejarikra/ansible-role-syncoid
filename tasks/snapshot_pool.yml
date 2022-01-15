@@ -1,0 +1,13 @@
+---
+# Copyright (c) 2021 Mohamed Tawfik <m_tawfik@aucegypt.edu>
+
+- name: Read zpool names ordered by size
+  ansible.builtin.shell:
+    cmd: set -o pipefail && zpool list -H -o name,size | sort -n -r -k2 | sed 's/|/ /' | awk '{print $1}'
+    executable: /bin/bash
+  register: syncoid__register_sized_zpools
+  changed_when: False
+
+- name: Set syncoid__snapshot_pool to largest sized pool
+  ansible.builtin.set_fact:
+    syncoid__snapshot_pool: "{{ syncoid__register_sized_zpools.stdout_lines[0] }}"

@@ -1,0 +1,45 @@
+{# Copyright (c) 2021 Mohamed Tawfik <m_tawfik@aucegypt.edu>
+#}
+
+# {{ ansible_managed|d("All changes will be lost") }}
+
+################################
+# {{ item.source_host }}@{{ item.source_dataset | replace('/', '#')}}.conf - syncoid dataset config file #
+################################
+
+{% set dataset_template = syncoid__combined_dataset_options_templates
+                            | selectattr('name', 'eq', item['dataset_template_name'])
+                            | first
+                            | d(syncoid__default_dataset_options)
+%}
+{% set connection_template = syncoid__combined_connection_options_templates
+                              | selectattr('name', 'eq', item['connection_template_name'])
+                              | first
+                              | d(syncoid__default_connection_options)
+%}
+{% set syncoid_options =  (' --compress=' + connection_template.compress) if connection_template.compress else ''
+                        + (' --identifier=' + dataset_template.identifier) if dataset_template.identifier else ''
+                        + ' --recursive' if dataset_template.recursive|bool else ''
+                        + ' --skip-parent' if dataset_template.skip_parent|bool else ''
+                        + (' --source-bwlimit=' + connection_template.source_bwlimit_mebibyte + ' m') if connection_template.source_bwlimit_mebibyte else ''
+                        + (' --target-bwlimit=' + connection_template.target_bwlimit_mebibyte + ' m') if connection_template.target_bwlimit_mebibyte else ''
+                        + ' --no-stream' if dataset_template.no_stream|bool else ''
+                        + ' --no-sync-snap' if dataset_template.no_sync_snap|bool else ''
+                        + ' --create-bookmark' if dataset_template.create_bookmark|bool else ''
+                        + ' --no-clone-rollback' if dataset_template.no_clone_rollback|bool else ''
+                        + ' --no-rollback' if dataset_template.no_rollback|bool else ''
+                        + (' --exclude=' + dataset_template.exclude) if dataset_template.exclude else ''
+                        + (' --sendoptions="' + dataset_template.send_options + '"') if dataset_template.send_options else ''
+                        + (' --recvoptions="' + dataset_template.receive_options + '"') if dataset_template.receive_options else ''
+                        + (' --sshkey=' + "/root/.ssh/" + item.ssh_identity|d(syncoid__ssh_main_identity))
+                        + (' --sshport=' + item.ssh_port|string|d('22'))
+%}
+syncoid_source_host={{ item.source_host }}
+
+syncoid_source_dataset={{ item.source_dataset }}
+
+syncoid_target_dataset={{ item.target_dataset|d(item.source_dataset) }}
+
+syncoid_options="{{ syncoid_options }}"
+
+syncoid_frequency={{ item.frequency|d('daily')|lower }}

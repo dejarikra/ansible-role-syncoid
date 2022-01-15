@@ -1,0 +1,65 @@
+---
+# Copyright (c) 2021 Mohamed Tawfik <m_tawfik@aucegypt.edu>
+
+- name: Create directory to store syncoid global configs
+  ansible.builtin.file:
+    path: '{{ syncoid__config_global_dir }}'
+    mode: '0755'
+    state: directory
+
+- name: Create directory to store syncoid dataset configs
+  ansible.builtin.file:
+    path: '{{ syncoid__config_datasets_dir }}'
+    mode: '0755'
+    state: directory
+
+- name: Check names of managed backup configuration files
+  ansible.builtin.set_fact:
+    syncoid__register_config_to_generate: '{{ item.source_host + "@" 
+                                            + item.source_dataset | replace("/", "#")
+                                            + ".conf" }}'
+  with_items: '{{ syncoid__combined_backup_configurations }}'
+  register: syncoid__register_config_to_generate_results_list
+
+- name: Make a list of managed backup configuration files
+  set_fact: 
+    syncoid__register_config_list: '{{  syncoid__register_config_to_generate_results_list.results 
+                                          | map(attribute="ansible_facts.syncoid__register_config_to_generate")
+                                          | list }}'
+
+- name: Print a list of managed backup configuration files
+  debug:
+    var: syncoid__register_config_list
+
+- name: Read names of existing backup configuration files
+  ansible.builtin.command: "ls -1 {{ syncoid__config_datasets_dir }}"
+  changed_when: False
+  register: syncoid__register_existing_configs
+
+- name: Remove unmanaged, existing backup configuration files
+  ansible.builtin.file:
+    path: '{{ syncoid__config_datasets_dir }}/{{ item }}'
+    state: absent
+  with_items: '{{ syncoid__register_existing_configs.stdout_lines }}'
+  when: syncoid__purge_old_configs and item not in syncoid__register_config_list
+
+- name: Remove explicitly "absent" managed backup configuration files
+  ansible.builtin.file:
+    path: '{{ syncoid__config_datasets_dir }}/{{ item.source_host }}@{{ item.source_dataset | replace("/", "#") }}.conf'
+    state: absent
+  with_items: '{{ syncoid__combined_backup_configurations }}'
+  when: item.state|d("present") in ["absent"]
+
+- name: Generate backup configuration files
+  ansible.builtin.template:
+    src: 'etc/syncoid/datasets/syncoid_dataset.conf.j2'
+    dest: '{{ syncoid__config_datasets_dir }}/{{ item.source_host }}@{{ item.source_dataset | replace("/", "#") }}.conf'
+    mode: '0644'
+  with_items: '{{ syncoid__combined_backup_configurations }}'
+  when: item.state|d("present") in ["present"]
+
+- name: Generate global configuration file
+  ansible.builtin.template:
+    src: 'etc/syncoid/syncoid.conf.j2'
+    dest: '{{ syncoid__config_global_dir }}/syncoid.conf'
+    mode: '0644'

@@ -1,0 +1,18 @@
+---
+# Copyright (c) 2021 Mohamed Tawfik <m_tawfik@aucegypt.edu>
+
+- name: Make sure that Ansible local facts directory exists
+  ansible.builtin.file:
+    path: '/etc/ansible/facts.d'
+    state: 'directory'
+    mode: '0755'
+
+- name: Save syncoid local facts
+  template:
+    src: 'etc/ansible/facts.d/syncoid.fact.j2'
+    dest: '/etc/ansible/facts.d/syncoid.fact'
+    mode: '0755'
+  notify: [ 'Refresh host facts' ]
+
+- name: Update Ansible facts if they were modified
+  meta: 'flush_handlers'

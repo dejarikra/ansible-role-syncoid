@@ -1,0 +1,7 @@
+---
+# Copyright (c) 2021 Mohamed Tawfik <m_tawfik@aucegypt.edu>
+
+- hosts: localhost
+  remote_user: root
+  roles:
+    - syncoid

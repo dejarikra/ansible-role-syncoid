@@ -1,0 +1,35 @@
+#!/bin/bash
+
+{# Copyright (c) 2021 Mohamed Tawfik <m_tawfik@aucegypt.edu>
+#}
+
+# {{ ansible_managed }}
+
+#################################################
+# syncoid.cron - syncoid cronjob file           #
+#################################################
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+{# ( #}
+    echo "--------------------------------------------------"
+    echo $(date) "syncoid start"
+
+    syncoid_cron_frequency={{ item }}
+    source {{ syncoid__config_global_dir }}/syncoid.conf
+
+    for filename in {{ syncoid__config_datasets_dir }}/*.conf; do
+        source "$filename"
+        if [ "$syncoid_cron_frequency" == "$syncoid_frequency" ]
+        then
+            echo Backing-up "$syncoid_source_dataset" from "$syncoid_source_host"
+
+            echo zfs create -p "$syncoid_snapshot_pool/$syncoid_snapshot_dataset/$syncoid_source_host/$syncoid_target_dataset"
+            echo syncoid $syncoid_options $syncoid_user@$syncoid_source_host:$syncoid_source_dataset $syncoid_snapshot_pool/$syncoid_snapshot_dataset/$syncoid_source_host/$syncoid_target_dataset
+        fi
+    done
+
+    echo $(date) "syncoid end"
+    echo "--------------------------------------------------" 
+{# ) >> /var/log/syncoid-cron.log 2>&1 & #}
+{# exit 0 #}
